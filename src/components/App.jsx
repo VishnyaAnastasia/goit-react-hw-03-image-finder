@@ -32,36 +32,36 @@ export class App extends Component {
     alt: null,
   };
 
-  async componentDidUpdate(_, prevState) {
+  componentDidUpdate(_, prevState) {
     const { query, page } = this.state;
-    const { pictures, pages } = await fetch(query, page);
 
-    if (prevState.page !== page) {
-      this.setState(prevState => {
-        return {
-          pictures: [...prevState.pictures, ...pictures],
-          loader: false,
-        };
-      });
-    }
-
-    if (prevState.query !== query) {
-      if (pictures.length === 0) {
-        Notify.warning('Oppps.. bad query');
-
-        this.setState({
-          loader: false,
-          gallery: false,
-        });
-        return;
-      }
-
+    if (prevState.page !== page || prevState.query !== query) {
       this.setState({
-        pictures,
-        pages,
-        loader: false,
-        gallery: true,
+        loader: true,
       });
+
+      fetch(query, page)
+        .then(({ pictures, pages }) => {
+          if (pictures.length === 0) {
+            Notify.warning('Oppps.. bad query');
+            this.setState({
+              gallery: false,
+            });
+            return;
+          }
+
+          this.setState({
+            pictures: [...prevState.pictures, ...pictures],
+            pages,
+            gallery: true,
+          });
+        })
+        .catch(error => Notify.warning('Oppps.. bad query'))
+        .finally(
+          this.setState({
+            loader: false,
+          })
+        );
     }
   }
 
@@ -69,25 +69,28 @@ export class App extends Component {
     event.preventDefault();
 
     const query = event.target.elements.input.value;
+
     if (query.trim() === '') {
       Notify.warning('Oppps.. please type query');
       return;
     }
 
-    this.setState({
-      pictures: [],
-      query,
-      loader: true,
-      page: 1,
+    this.setState(prevState => {
+      const pictures = prevState.pictures;
+      pictures.length = 0;
+
+      return {
+        pictures,
+        query,
+        page: 1,
+      };
     });
   };
 
   onClick = () => {
-    const { page } = this.state;
-    const nextPage = page + 1;
-    this.setState({
-      page: nextPage,
-      loder: true,
+    this.setState(prevState => {
+      const page = prevState.page + 1;
+      return { page };
     });
   };
 
